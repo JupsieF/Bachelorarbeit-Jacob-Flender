@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
         );
     }
     const { data, error } = await supabase
-    .schema("bachelor_baseplant_jacob_flender")
+        .schema("bachelor_baseplant_jacob_flender")
         .from("plant")
         .insert([parse.data])
         .select();
@@ -27,11 +27,10 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    // Plant_Schedule anlegen
     const plantId = data[0].id;
     const now = new Date().toISOString();
     const { error: scheduleError } = await supabase
-    .schema("bachelor_baseplant_jacob_flender") 
+        .schema("bachelor_baseplant_jacob_flender")
         .from("plant_schedule")
         .insert([
             { plant_id: plantId, last_watered: null, next_watering: now },
@@ -48,7 +47,7 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
     const { data, error } = await supabase
-    .schema("bachelor_baseplant_jacob_flender")
+        .schema("bachelor_baseplant_jacob_flender")
         .from("plant")
         .select("id, name, image_url, size, location_id, location(name)");
     if (error) {
@@ -69,7 +68,7 @@ export async function PATCH(req: NextRequest) {
         }
         const { id, ...update } = parse.data;
         const { error } = await supabase
-        .schema("bachelor_baseplant_jacob_flender")
+            .schema("bachelor_baseplant_jacob_flender")
             .from("plant")
             .update(update)
             .eq("id", id);
@@ -93,7 +92,6 @@ export async function DELETE(req: NextRequest) {
     }
     const { id } = parse.data;
 
-    // Erst Plant_Schedule löschen, dann Plant
     const { error: scheduleError } = await supabase
         .schema("bachelor_baseplant_jacob_flender")
         .from("plant_schedule")

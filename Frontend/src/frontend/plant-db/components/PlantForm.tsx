@@ -116,7 +116,6 @@ export default function AddPlantForm() {
                     return;
                 }
 
-                // 1) Bild hochladen (falls vorhanden)
                 let uploadedImageUrl: string | null = null;
                 if (file) {
                     try {
@@ -131,7 +130,6 @@ export default function AddPlantForm() {
                     }
                 }
 
-                // 2) Pflanze anlegen
                 const plantData = {
                     name: newName.trim(),
                     location_id: selectedLocationId,
@@ -158,7 +156,6 @@ export default function AddPlantForm() {
 
                 const createdId = json.data[0].id;
 
-                // 3) Falls ein Bild hochgeladen wurde, jetzt die Plant-ID aktualisieren
                 if (uploadedImageUrl) {
                     try {
                         const imageRes = await fetch(
@@ -193,7 +190,6 @@ export default function AddPlantForm() {
                     }
                 }
 
-                // 4) Gießaufgabe erstellen
                 try {
                     const wateringRes = await fetch("/api/watering-task", {
                         method: "POST",
@@ -201,18 +197,25 @@ export default function AddPlantForm() {
                         body: JSON.stringify({
                             plant_id: createdId,
                             interval: newInterval,
-                            method: newMethod
+                            method: newMethod,
                         }),
                     });
 
                     if (!wateringRes.ok) {
                         const wateringJson = await wateringRes.json();
-                        console.error("Fehler beim Anlegen der Gießaufgabe:", wateringJson.error);
-                        toast.error("Pflanze wurde angelegt, aber die Gießaufgabe konnte nicht erstellt werden.");
+                        console.error(
+                            "Fehler beim Anlegen der Gießaufgabe:",
+                            wateringJson.error
+                        );
+                        toast.error(
+                            "Pflanze wurde angelegt, aber die Gießaufgabe konnte nicht erstellt werden."
+                        );
                     }
                 } catch (err: any) {
                     console.error("Fehler beim Anlegen der Gießaufgabe:", err);
-                    toast.error("Pflanze wurde angelegt, aber die Gießaufgabe konnte nicht erstellt werden.");
+                    toast.error(
+                        "Pflanze wurde angelegt, aber die Gießaufgabe konnte nicht erstellt werden."
+                    );
                 }
 
                 toast.success("Pflanze und neue Art erfolgreich angelegt.");
@@ -234,7 +237,6 @@ export default function AddPlantForm() {
                 careId = found.id;
                 plantName = found.name!;
 
-                // 1) Bild hochladen (falls vorhanden)
                 let uploadedImageUrl: string | null = null;
                 if (file) {
                     try {
@@ -249,7 +251,6 @@ export default function AddPlantForm() {
                     }
                 }
 
-                // 2) Pflanze anlegen
                 const plantInstanceData: TablesInsert<"Plant"> = {
                     name: plantName,
                     location_id: selectedLocationId,
@@ -272,7 +273,6 @@ export default function AddPlantForm() {
                     return;
                 }
 
-                // 3) Falls ein Bild hochgeladen wurde, jetzt die Plant-ID aktualisieren
                 if (uploadedImageUrl) {
                     try {
                         const imageRes = await fetch(
@@ -307,8 +307,7 @@ export default function AddPlantForm() {
                     }
                 }
 
-                // 4) Gießaufgabe für existierende Pflanzenart
-                const careProfile = careProfiles.find(p => p.id === careId);
+                const careProfile = careProfiles.find((p) => p.id === careId);
                 if (careProfile) {
                     try {
                         const wateringRes = await fetch("/api/watering-task", {
@@ -317,18 +316,28 @@ export default function AddPlantForm() {
                             body: JSON.stringify({
                                 plant_id: plantJson.data[0].id,
                                 interval: careProfile.interval,
-                                method: careProfile.method
+                                method: careProfile.method,
                             }),
                         });
 
                         if (!wateringRes.ok) {
                             const wateringJson = await wateringRes.json();
-                            console.error("Fehler beim Anlegen der Gießaufgabe:", wateringJson.error);
-                            toast.error("Pflanze wurde angelegt, aber die Gießaufgabe konnte nicht erstellt werden.");
+                            console.error(
+                                "Fehler beim Anlegen der Gießaufgabe:",
+                                wateringJson.error
+                            );
+                            toast.error(
+                                "Pflanze wurde angelegt, aber die Gießaufgabe konnte nicht erstellt werden."
+                            );
                         }
                     } catch (err: any) {
-                        console.error("Fehler beim Anlegen der Gießaufgabe:", err);
-                        toast.error("Pflanze wurde angelegt, aber die Gießaufgabe konnte nicht erstellt werden.");
+                        console.error(
+                            "Fehler beim Anlegen der Gießaufgabe:",
+                            err
+                        );
+                        toast.error(
+                            "Pflanze wurde angelegt, aber die Gießaufgabe konnte nicht erstellt werden."
+                        );
                     }
                 }
 
@@ -704,23 +713,3 @@ export default function AddPlantForm() {
         </>
     );
 }
-
-/* function getScaledCare(
-        base: { interval: number; volume: number },
-        size: "small" | "medium" | "large"
-    ) {
-        switch (size) {
-            case "small":
-                return {
-                    interval: Math.round(base.interval * 1.2),
-                    volume: Math.round(base.volume * 0.5),
-                };
-            case "large":
-                return {
-                    interval: Math.round(base.interval * 0.8),
-                    volume: Math.round(base.volume * 2),
-                };
-            default:
-                return base;
-        }
-    } */

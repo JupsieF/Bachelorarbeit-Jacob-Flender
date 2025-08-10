@@ -8,12 +8,21 @@ import {
 import { DistancePair, LocationProperties } from "../shared/types/locationData";
 
 /**
- * Berechnet paarweise die Distanzen je Stock und speichert sie in der DB.
- * Existierende Einträge werden vorher gelöscht.
+ * Berechnet die Distanzen zwischen allen Standorten auf jedem Stockwerk und speichert diese in der Datenbank.
+ * 
+ * Die Funktion führt folgende Schritte aus:
+ * 1. Holt Standortdaten aus der Datenquelle.
+ * 2. Filtert und gruppiert die Standorte nach Stockwerk.
+ * 3. Löscht bestehende Distanzpaare für jedes Stockwerk.
+ * 4. Berechnet die Distanzen zwischen allen möglichen Standortpaaren auf demselben Stockwerk (inklusive Distanz zu sich selbst).
+ * 5. Speichert die berechneten Distanzpaare in der Datenbank.
+ * 
+ * Fehler werden im Fehlerfall in der Konsole ausgegeben.
+ * 
+ * @returns {Promise<void>} Ein Promise, das abgeschlossen wird, sobald alle Distanzen berechnet und gespeichert wurden.
  */
 export async function calculateAndStoreDistances(): Promise<void> {
     try {
-        // Hole Plätze
         const { data: locationData, error } = await fetchLocations();
 
         if (error) throw error;
@@ -22,7 +31,6 @@ export async function calculateAndStoreDistances(): Promise<void> {
             return;
         }
 
-        // Mapping auf den internen Typen
         const locations: LocationProperties[] = locationData.map(
             (loc: {
                 name: string;
@@ -40,24 +48,20 @@ export async function calculateAndStoreDistances(): Promise<void> {
             })
         );
 
-        // Validiere Plätze
         const validLocations = locations.filter(
             (loc) => loc.desklyID.trim() !== ""
         );
 
-        // Gruppiere nach Stock
         const grouped: Record<number, LocationProperties[]> = {};
         validLocations.forEach((loc) => {
             if (!grouped[loc.floor]) grouped[loc.floor] = [];
             grouped[loc.floor].push(loc);
         });
 
-        // Berechne für jeden Stock
         for (const floorKey in grouped) {
             const floor = Number(floorKey);
             const floorLocations = grouped[floor];
 
-            // Lösche vorhandene Paare für den Stock
             await deleteDistancePairsForFloor(floor);
 
             const toInsert: Array<{
@@ -69,7 +73,6 @@ export async function calculateAndStoreDistances(): Promise<void> {
                 floor: number;
             }> = [];
 
-            // Nur eine Richtung pro Paar speichern (i < j)
             for (let i = 0; i < floorLocations.length; i++) {
                 for (let j = i + 1; j < floorLocations.length; j++) {
                     const a = floorLocations[i];
@@ -87,7 +90,6 @@ export async function calculateAndStoreDistances(): Promise<void> {
                 }
             }
 
-            // Paare von A zu A, B zu B, ... (Distanz 0)
             floorLocations.forEach((a) => {
                 toInsert.push({
                     from_id: a.desklyID,
@@ -99,7 +101,6 @@ export async function calculateAndStoreDistances(): Promise<void> {
                 });
             });
 
-            // Bulk insert
             const { error: insertError } = await insertDistancePairs(toInsert);
 
             if (insertError)
@@ -113,7 +114,12 @@ export async function calculateAndStoreDistances(): Promise<void> {
 }
 
 /**
- * Lädt persistente Paare aus der DB und gibt sie als Record zurück.
+ * Lädt alle Distanzpaare zwischen Standorten aus der Datenbank und gruppiert sie nach Stockwerk.
+ * Die Daten werden in Batches abgefragt, um große Datenmengen effizient zu verarbeiten.
+ * 
+ * @returns Ein Promise, das ein Objekt mit Stockwerksnummern als Schlüssel und Arrays von `DistancePair` als Wert zurückgibt.
+ * 
+ * @throws Gibt im Fehlerfall ein leeres Objekt zurück und loggt den Fehler in der Konsole.
  */
 export async function loadDistancePairs(): Promise<Record<number, DistancePair[]>> {
     const pageSize = 1000;
@@ -128,13 +134,11 @@ export async function loadDistancePairs(): Promise<Record<number, DistancePair[]
     const distanceByFloor: Record<number, DistancePair[]> = {};
 
     try {
-        // 1) Gesamtzahl der Zeilen ermitteln
         const { count, error: countError } = await getDistancePairsCount();
 
         if (countError) throw countError;
         const totalRows = count ?? 0;
 
-        // 2) Alle Daten in 1000er-Batches laden
         for (let offset = 0; offset < totalRows; offset += pageSize) {
             const { data, error } = await fetchDistancePairsBatch(offset, pageSize);
 
@@ -145,7 +149,6 @@ export async function loadDistancePairs(): Promise<Record<number, DistancePair[]
             }
         }
 
-        // 3) Mapping und Gruppierung
         rawData.forEach(row => {
             const pair: DistancePair = {
                 from: {
@@ -178,7 +181,19 @@ export async function loadDistancePairs(): Promise<Record<number, DistancePair[]
 }
 
 /**
- * Analysiert die Anzahl der Plätze und resultierenden Distanzpaare pro Stockwerk
+ * Analysiert die Distanzpaare zwischen Standorten pro Stockwerk.
+ *
+ * Diese Funktion lädt Standortdaten, gruppiert sie nach Stockwerk und berechnet für jedes Stockwerk:
+ * - Die Anzahl der Plätze
+ * - Die Anzahl ungerichteter Paare (ohne Selbst-Paare)
+ * - Die Anzahl der Selbst-Paare (A→A)
+ * - Die Gesamtanzahl der Paare (ungerichtet + Selbst-Paare)
+ *
+ * Die Ergebnisse werden für jedes Stockwerk sowie als Gesamtanalyse in der Konsole ausgegeben.
+ *
+ * Fehler beim Laden oder Verarbeiten der Daten werden ebenfalls in der Konsole ausgegeben.
+ *
+ * @returns {Promise<void>} Ein Promise, das abgeschlossen wird, wenn die Analyse beendet ist.
  */
 export async function analyzeLocationDistances(): Promise<void> {
     try {

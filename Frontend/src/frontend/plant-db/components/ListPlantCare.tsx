@@ -44,7 +44,6 @@ export default function PlantCareList() {
     const [newVolume, setNewVolume] = useState<number | null>(null);
     const [newMethod, setNewMethod] = useState("");
 
-    // Button click handler to open table
     const handleOpen = async () => {
         setLoading(true);
         setError(null);
@@ -70,12 +69,10 @@ export default function PlantCareList() {
         setShowTable(true);
     };
 
-    // Update form submission handler
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (editingId === null) return;
 
-        // Validations
         if (
             newName.trim() &&
             careEntries.some((e) => e.name === newName && e.id !== editingId)
@@ -106,7 +103,6 @@ export default function PlantCareList() {
             return;
         }
 
-        // Collect changes
         const updates: ChangedProperties = {};
         const current = careEntries.find((e) => e.id === editingId);
         if (current) {
@@ -138,10 +134,8 @@ export default function PlantCareList() {
             return;
         }
 
-        // Reload entries
         await handleOpen();
 
-        // Reset form state
         setEditingId(null);
         setNewName("");
         setNewInterval(null);

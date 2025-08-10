@@ -4,13 +4,16 @@ import { TaskDescription } from "@/shared/types/task";
 import { sendWateringTaskToUser } from "@/slack/slackBot";
 
 /**
- * Liste aller Benutzer auf, welche derzeit im Arbeitsbereich vorhanden sind.
+ * Ruft alle Slack-Benutzer ab und gibt eine Liste mit ausgewählten Benutzerinformationen zurück.
+ *
+ * @returns {Promise<any[]>} Eine Promise, die ein Array von Objekten mit den Feldern `id`, `name`, `real_name` und `email` enthält.
+ * @throws Gibt im Fehlerfall eine leere Liste zurück und protokolliert den Fehler in der Konsole.
  */
 export async function listAllSlackUsers(): Promise<any[]> {
     try {
         const result = await app.client.users.list({});
         const members = result.members ?? [];
-        // Mappe jeden Slack-Benutzer auf ein vereinfachtes Objekt.
+
         return members.map((user: any) => ({
             id: user.id,
             name: user.name,
@@ -23,14 +26,15 @@ export async function listAllSlackUsers(): Promise<any[]> {
     }
 }
 
-const users = listAllSlackUsers();
-console.log(users);
-
-
 /**
- * Benachrichtige einen Benutzer über eine zugewiesene Bewässerungsaufgabe.
- * @param user - Details des Benutzers, der benachrichtigt werden soll.
- * @param description - Beschreibung der Aufgabe, die dem Benutzer zugewiesen wurde.
+ * Benachrichtigt einen Benutzer über eine Bewässerungsaufgabe per Slack.
+ *
+ * Diese Funktion erstellt eine Nachricht mit den relevanten Informationen zur Bewässerungsaufgabe
+ * und sendet diese an den Benutzer, sofern eine Slack-ID vorhanden ist. Falls keine Slack-ID
+ * hinterlegt ist, wird eine Warnung im Log ausgegeben.
+ *
+ * @param user Die Benutzerdetails, einschließlich Slack-ID und Name.
+ * @param description Die Beschreibung der Bewässerungsaufgabe, inklusive Pflanze, Standort, Wassermenge, Methode, Bild und Aufgaben-ID.
  */
 export async function notifyUserForTask(
     user: UserDetails,
@@ -65,7 +69,12 @@ export async function notifyUserForTask(
 }
 
 /**
- * Sende eine Benachrichtigung an einen Slack-Benutzer.
+ * Sendet eine Benachrichtigung an einen Slack-Nutzer.
+ *
+ * @param slackID Die Slack-ID des Empfängers.
+ * @param message Die Nachricht, die gesendet werden soll.
+ * @param blocks Optional. Zusätzliche Slack-Blocks für die Nachricht.
+ * @returns Promise, das abgeschlossen wird, wenn die Nachricht gesendet wurde.
  */
 export async function notifyUserBySlack(
     slackID: string,
@@ -83,18 +92,4 @@ export async function notifyUserBySlack(
     }
 }
 
-/**
- * Placeholder for a helper function that queries Slack for user IDs by email.
- * This should interact with Slack's API (e.g., using @slack/web-api or @slack/bolt)
- * and return an array of objects: [{ email: string, slackId: string | null }, ...].
- *
- * You will need to implement this based on your Slack integration.
- */
-export async function getSlackIdsFromSlack(
-    emails: string[]
-): Promise<{ email: string; slackId: string | null }[]> {
-    // TODO: Implement the actual Slack API call using your preferred library.
-    // For now, we return an array with null slackId for each email (simulate no matches).
-    return emails.map((email) => ({ email, slackId: null }));
-}
 export default app;

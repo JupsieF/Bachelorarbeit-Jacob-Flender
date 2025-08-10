@@ -15,13 +15,13 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    // 1. Case-insensitive Check auf vorhandene Art
+    
     const { name } = parse.data;
     const { data: existing, error: checkError } = await supabase
         .schema("bachelor_baseplant_jacob_flender")
         .from("plant_care")
         .select("id")
-        .ilike("name", name.trim()); // ilike ist case-insensitive
+        .ilike("name", name.trim()); 
 
     if (checkError) {
         return NextResponse.json(
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    // 2. Pflegeprofil anlegen
+    
     const {
         method,
         interval,
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    // 3. Pflanze anlegen, verknüpft mit neuem Pflegeprofil
+
     const care_id = careData[0].id;
     const { data: plant, error: plantError } = await supabase
         .schema("bachelor_baseplant_jacob_flender")
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    // 4. Plant_Schedule anlegen
+    
     const plantId = plant[0].id;
     const now = new Date().toISOString();
     const { error: scheduleError } = await supabase

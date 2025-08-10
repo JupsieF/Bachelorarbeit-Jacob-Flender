@@ -2,16 +2,24 @@ import supabase from "@/backend/api/backendConnection";
 import { Booking } from "@/shared/types/booking";
 import { UserDetails } from "@/shared/types/user";
 
-
 /**
- * Fügt alle User aus den Bookings als Employees in die DB ein (falls noch nicht vorhanden).
- * Die SlackID wird immer auf die aus den MockBookings gesetzt (Debug-Modus).
+ * Fügt neue Mitarbeiter basierend auf den Buchungen in die Employee-Tabelle ein.
+ * 
+ * Diese Funktion extrahiert eindeutige Benutzer aus den übergebenen Buchungen und prüft,
+ * ob deren E-Mail-Adressen bereits in der Employee-Tabelle vorhanden sind. Für alle neuen
+ * Benutzer werden entsprechende Einträge mit einer angegebenen Slack-ID erstellt.
+ * 
+ * @param bookings - Array von Buchungsobjekten, die Benutzerdaten enthalten können.
+ * @param mockSlackID - Die Slack-ID, die für alle neuen Mitarbeiter gesetzt wird.
+ * 
+ * @remarks
+ * - Gibt eine Konsolenmeldung aus, wenn keine neuen Benutzer gefunden oder eingefügt werden.
+ * - Gibt eine Fehlermeldung aus, falls das Einfügen fehlschlägt.
  */
 export async function seedEmployeesFromBookings(
     bookings: { data?: Booking[] }[],
     mockSlackID: string
 ) {
-    // Sammle alle User aus den Bookings
     const users: UserDetails[] = [];
     bookings.forEach(floorBookings => {
         (floorBookings.data ?? []).forEach(booking => {
@@ -30,7 +38,6 @@ export async function seedEmployeesFromBookings(
         return;
     }
 
-    // Hole bereits existierende Employees (nach E-Mail)
     const emails = users.map(u => u.email.toLowerCase());
     const { data: existing, error } = await supabase
         .schema("bachelor_baseplant_jacob_flender")
@@ -41,7 +48,6 @@ export async function seedEmployeesFromBookings(
         (existing ?? []).map(e => (e.mail ?? "").toLowerCase())
     );
 
-    // Filtere neue User heraus
     const newUsers = users.filter(
         u => !existingEmails.has(u.email.toLowerCase())
     );
@@ -51,7 +57,6 @@ export async function seedEmployeesFromBookings(
         return;
     }
 
-    // Baue Insert-Objekte mit deiner SlackID
     const toInsert = newUsers.map(u => ({
         mail: u.email,
         real_name: `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim(),

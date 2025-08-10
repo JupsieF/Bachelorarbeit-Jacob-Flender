@@ -1,4 +1,15 @@
-export async function uploadPlantImage(file: File, plantId: number): Promise<string> {
+/**
+ * Lädt ein Pflanzenbild zum Server hoch und verknüpft es mit einer angegebenen Pflanzen-ID.
+ *
+ * @param file - Die Bilddatei, die hochgeladen werden soll.
+ * @param plantId - Die ID der Pflanze, der das Bild zugeordnet werden soll.
+ * @returns Ein Promise, das die URL des hochgeladenen Bildes als string zurückgibt.
+ * @throws Fehler, wenn der Upload fehlschlägt oder die Server-Antwort nicht verarbeitet werden kann.
+ */
+export async function uploadPlantImage(
+    file: File,
+    plantId: number
+): Promise<string> {
     const body = new FormData();
     body.append("plantId", plantId.toString());
     body.append("image", file);
@@ -23,8 +34,8 @@ export async function uploadPlantImage(file: File, plantId: number): Promise<str
     if (!res.ok || !payload.success) {
         console.error("[uploadPlantImage] Upload failed:", payload);
         throw new Error(
-            payload.error || 
-            "Upload fehlgeschlagen ohne spezifische Fehlermeldung"
+            payload.error ||
+                "Upload fehlgeschlagen ohne spezifische Fehlermeldung"
         );
     }
 

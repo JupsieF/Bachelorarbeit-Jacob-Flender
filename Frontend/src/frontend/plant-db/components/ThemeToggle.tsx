@@ -25,7 +25,7 @@ export default function ThemeToggle({ onToggle }: ThemeToggleProps) {
         setDark(next);
         document.documentElement.classList.toggle("dark", next);
         localStorage.setItem("theme", next ? "dark" : "light");
-        onToggle?.(next); 
+        onToggle?.(next);
     };
 
     return (

@@ -9,7 +9,6 @@ export const config = {
 
 export async function POST(request: NextRequest) {
     try {
-        // 1) FormData aus Request holen
         const formData = await request.formData();
         const plantIdRaw = formData.get("plantId");
         const imageFile = formData.get("image");
@@ -19,8 +18,8 @@ export async function POST(request: NextRequest) {
             hasFile: !!imageFile,
         });
 
-        // 2) Validierung plantId
-        const plantIdNum = typeof plantIdRaw === "string" ? Number(plantIdRaw) : NaN;
+        const plantIdNum =
+            typeof plantIdRaw === "string" ? Number(plantIdRaw) : NaN;
         const parsed = plantImageSchema.safeParse({ plantId: plantIdNum });
         if (!parsed.success) {
             console.error("[plant-image] Invalid plantId:", plantIdRaw);
@@ -31,7 +30,6 @@ export async function POST(request: NextRequest) {
         }
         const { plantId } = parsed.data;
 
-        // 3) Datei prüfen
         if (!imageFile || !(imageFile instanceof Blob)) {
             console.error("[plant-image] No valid image file received");
             return NextResponse.json(
@@ -40,19 +38,19 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 4) Datei in Buffer umwandeln
         const arrayBuffer = await imageFile.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        const originalFilename = (imageFile as File).name || `upload-${Date.now()}`;
+        const originalFilename =
+            (imageFile as File).name || `upload-${Date.now()}`;
 
-        // 5) Upload zu Supabase Storage
         const fileName = `plants/${plantId}_${Date.now()}_${originalFilename}`;
-        const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-            .from("bachelor-baseplant-jacob-flender-bucket")
-            .upload(fileName, buffer, { 
-                upsert: true,
-                contentType: imageFile.type 
-            });
+        const { data: uploadData, error: uploadError } =
+            await supabaseAdmin.storage
+                .from("bachelor-baseplant-jacob-flender-bucket")
+                .upload(fileName, buffer, {
+                    upsert: true,
+                    contentType: imageFile.type,
+                });
 
         if (uploadError) {
             console.error("[plant-image] Upload error:", uploadError);
@@ -70,7 +68,6 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 6) Public URL generieren
         const { data: urlData } = supabaseAdmin.storage
             .from("bachelor-baseplant-jacob-flender-bucket")
             .getPublicUrl(uploadData.path);
@@ -83,16 +80,13 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Bei temporären Uploads (neue Pflanze wird erst noch angelegt)
-        // kein DB-Update durchführen
-        if (plantId < 0 || plantId > 1000000000) {  // Temporäre IDs sind Unix Timestamps
+        if (plantId < 0 || plantId > 1000000000) {
             return NextResponse.json({
                 success: true,
-                imageUrl: urlData.publicUrl
+                imageUrl: urlData.publicUrl,
             });
         }
 
-        // 7) DB Update nur für existierende Pflanzen
         const { error: dbError } = await supabaseAdmin
             .schema("bachelor_baseplant_jacob_flender")
             .from("Plant")
@@ -101,20 +95,20 @@ export async function POST(request: NextRequest) {
 
         if (dbError) {
             console.error("[plant-image] Database update error:", dbError);
-            // Bild wurde hochgeladen, aber DB-Update fehlgeschlagen
-            // Trotzdem URL zurückgeben
+
             return NextResponse.json({
                 success: true,
                 imageUrl: urlData.publicUrl,
-                warning: "Bild hochgeladen, aber Datenbank-Update fehlgeschlagen: " + dbError.message
+                warning:
+                    "Bild hochgeladen, aber Datenbank-Update fehlgeschlagen: " +
+                    dbError.message,
             });
         }
 
         return NextResponse.json({
             success: true,
-            imageUrl: urlData.publicUrl
+            imageUrl: urlData.publicUrl,
         });
-
     } catch (error: any) {
         console.error("[plant-image] Unexpected error:", error);
         return NextResponse.json(
