@@ -1,6 +1,6 @@
-# Bachelor Thesis Project - Plant Database & Management System
+# Bachelor Thesis Project - Development of a software-based watering reminder for plants in office spaces with desk sharing
 
-Title: "Entwicklung einer softwaregestützten Bewässerungserinnerung für Pflanzen auf Büroflächen mit Desk-Sharing"
+German Title: "Entwicklung einer softwaregestützten Bewässerungserinnerung für Pflanzen auf Büroflächen mit Desk-Sharing"
 
 ## Project Structure
 
@@ -21,6 +21,7 @@ Title: "Entwicklung einer softwaregestützten Bewässerungserinnerung für Pflan
 - **Git**
 - **Supabase** account
 - **Slack** workspace (for bot integration)
+- **des.kly** api-key
 
 ### 1. Clone the Repository
 
