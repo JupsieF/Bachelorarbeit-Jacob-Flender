@@ -25,8 +25,8 @@ Title: "Entwicklung einer softwaregestützten Bewässerungserinnerung für Pflan
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/basecom/2025-Bachelorarbeit-Jacob-Flender.git
-cd 2025-Bachelorarbeit-Jacob-Flender
+git clone https://github.com/JupsieF/Bachelorarbeit-Jacob-Flender.git
+cd Bachelorarbeit-Jacob-Flender
 ```
 
 ### 2. Install Dependencies
@@ -65,9 +65,9 @@ Then edit each `.env` file and replace the **ANONYMIZED** values with your actua
 - **Slack Bot Token** (from your Slack app configuration)
 - **Slack Signing Secret** (from your Slack app configuration)
 
-⚠️ **Important**: All example values are anonymized and will not work. You must replace them with real credentials.
+⚠️ **Important**: All example values are anonymized and will not work. This was done to hide real API-Keys and IDs of basecom resources.
 
-## 🗄️ Database Setup
+##  Database Setup
 
 ### Supabase Setup
 
@@ -82,7 +82,7 @@ Then edit each `.env` file and replace the **ANONYMIZED** values with your actua
 - `locations` - Physical locations and floors
 - `employees` - User/employee information
 
-## 🏃‍♂️ Running the Application
+## Running the Application
 
 ### Development Mode
 
@@ -117,7 +117,7 @@ npm run build
 npm start
 ```
 
-## 📱 Features
+## Features
 
 ### Plant Management
 - Add, edit, and delete plants
@@ -142,7 +142,7 @@ npm start
 - Real-time updates
 - Image upload and management
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 ### Backend
 - **Node.js** with **TypeScript**
@@ -157,7 +157,7 @@ npm start
 - **Radix UI** for accessible components
 - **Supabase client** for data fetching
 
-## 📝 Available Scripts
+## Available Scripts
 
 ### Backend
 - `npm run dev` - Start development server
@@ -170,7 +170,7 @@ npm start
 - `npm start` - Start production server
 - `npm run lint` - Run ESLint
 
-## 🔧 Configuration
+## Configuration
 
 ### Slack Bot Setup
 1. Create a new Slack app at [api.slack.com](https://api.slack.com)
@@ -179,12 +179,12 @@ npm start
 4. Add bot token to environment variables
 
 ### Supabase Configuration
-1. Set up RLS (Row Level Security) policies
+1. Set up RLS (Row Level Security) policies or disable them (not recommended)
 2. Configure authentication providers if needed
 3. Set up storage buckets for image uploads
 4. Configure database functions and triggers
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -208,7 +208,7 @@ npm install
 - Check network connectivity
 - Ensure RLS policies allow access
 
-## 📚 Additional Resources
+## Additional Resources
 
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Supabase Documentation](https://supabase.com/docs)
@@ -216,20 +216,12 @@ npm install
 - [Tailwind CSS](https://tailwindcss.com/docs)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs)
 
-## 👥 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## 📄 License
+## License
 
 This project is part of a bachelor thesis and is for educational purposes.
 
 ---
 
 **Author**: Jacob Flender  
-**Institution**: Basecom  
 **Year**: 2025
