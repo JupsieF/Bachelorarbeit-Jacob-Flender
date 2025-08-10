@@ -2,7 +2,7 @@
 
 Title: "Entwicklung einer softwaregestützten Bewässerungserinnerung für Pflanzen auf Büroflächen mit Desk-Sharing"
 
-## 📋 Project Structure
+## Project Structure
 
 ```
 ├── Backend/          # Node.js/TypeScript backend with Slack integration
@@ -12,7 +12,7 @@ Title: "Entwicklung einer softwaregestützten Bewässerungserinnerung für Pflan
 └── README.md
 ```
 
-## 🚀 Quick Setup
+## Quick Setup
 
 ### Prerequisites
 
