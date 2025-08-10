@@ -22,7 +22,26 @@ const app = new App({
 });
 
 /**
- * Sendet eine Bewässerungsaufgabe an einen Nutzer.
+ * Sendet eine Bewässerungsaufgabe als Slack-Nachricht an einen bestimmten Benutzer.
+ * 
+ * Die Nachricht enthält Details zur Aufgabe (Pflanze, Standort, Wassermenge, Methode, ggf. Bild)
+ * und einen Button zur Bestätigung der erledigten Bewässerung. Nach Ablauf einer bestimmten Zeit
+ * wird die Nachricht aktualisiert, um den Status der Aufgabe zu prüfen und ggf. an den nächsten
+ * Kandidaten weiterzuleiten oder die Aufgabe als abgelaufen zu markieren.
+ * 
+ * @param slackId Die Slack-ID des Benutzers, der die Aufgabe erhalten soll.
+ * @param taskDescription Objekt mit Details zur Bewässerungsaufgabe:
+ *  - task_id: Die eindeutige ID der Aufgabe.
+ *  - plant_name: Name der Pflanze.
+ *  - location_name: Standort der Pflanze.
+ *  - volume: Wassermenge in ml.
+ *  - method: Bewässerungsmethode. 
+ *  - image_url: URL zu einem Bild der Pflanze (optional).
+ * 
+ * @remarks
+ * Die Funktion verwendet Slack-Blocks für die Nachricht und aktualisiert diese nach Ablauf
+ * der Bestätigungszeit. Falls die Aufgabe nicht erledigt wurde, wird sie an den nächsten
+ * Kandidaten weitergeleitet oder als abgelaufen markiert.
  */
 export async function sendWateringTaskToUser({
     slackId,

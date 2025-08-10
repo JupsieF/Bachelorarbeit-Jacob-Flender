@@ -4,12 +4,11 @@ import { PostgrestError } from "@supabase/supabase-js";
 
 const desklyKey = process.env.DESKLY_KEY;
 
-// FloorRoomIds werden benötigt, um die Ressourceninformationen für jeden Stock zuzugreifen
 const floorRoomIds = [
     process.env.FLOOR1_ROOM_ID,
     process.env.FLOOR2_ROOM_ID,
     process.env.FLOOR3_ROOM_ID,
-].filter(Boolean); // Entfernt leere Einträge, falls Umgebungsvariablen nicht gesetzt sind
+].filter(Boolean);
 
 // Type, welcher die Struktur der Antwort von deskly beschreibt
 type LocationData = {
@@ -20,6 +19,7 @@ type LocationData = {
         resources: Resource[];
     };
 };
+
 // Type, welcher die Struktur der Ressourcen beschreibt
 type Resource = {
     id: string;
@@ -27,11 +27,17 @@ type Resource = {
     vertices: [number, number][];
 };
 
-// Speichert fehlgeschlagene Abfragen für die Fehlersuche
 let failedFloorRoomIds: string[] = [];
 
 /**
- * Hole und verarbeite Ressourcen für eine gegebene floorRoomId.
+ * Fragt Ressourcen für einen bestimmten Raum anhand der floorRoomId von der Deskly API ab.
+ * 
+ * Sendet eine GET-Anfrage an die Deskly API und verarbeitet die Antwort.
+ * Bei erfolgreicher Antwort werden die Ressourcen extrahiert und an die Funktion `checkAndInsertEntries` weitergegeben.
+ * Im Fehlerfall oder bei unerwarteter API-Antwort wird die floorRoomId zu einer Fehlerliste hinzugefügt und eine Fehlermeldung ausgegeben.
+ * 
+ * @param floorRoomId Die eindeutige ID des Raums, für den die Ressourcen abgefragt werden sollen.
+ * @returns Promise<void>
  */
 async function queryResources(floorRoomId: string) {
     const options: RequestInit = {
@@ -59,7 +65,6 @@ async function queryResources(floorRoomId: string) {
             return;
         }
 
-        // Extrahiere die Ressourceninformationen aus der Antwort
         const resources = res.data.resources.map((resource) => ({
             id: resource.id,
             name: resource.name,
@@ -70,7 +75,6 @@ async function queryResources(floorRoomId: string) {
             `Fetched ${resources.length} resources for floor ${floorRoomId}`
         );
 
-        // Füge die Ressourcen in die Datenbank ein oder aktualisiere sie
         await checkAndInsertEntries(resources, floorRoomId);
     } catch (error) {
         console.error(`Error fetching data for ${floorRoomId}:`, error);
@@ -78,9 +82,15 @@ async function queryResources(floorRoomId: string) {
 }
 
 /**
- * Schaue nach, ob die Ressourcen in der Datenbank existieren.
- * Füge sie ein, wenn sie fehlen, oder aktualisiere sie, wenn die ID oder Koordinaten abweichen.
- **/
+ * Überprüft die angegebenen Ressourcen und fügt sie in die Datenbank ein oder aktualisiert sie,
+ * falls sie bereits existieren. Für jede Ressource und deren Koordinaten (vertices) wird geprüft,
+ * ob ein entsprechender Eintrag in der Tabelle "location" existiert. Falls nicht, wird ein neuer
+ * Eintrag erstellt. Falls der Eintrag existiert, aber sich die deskly_id oder die Koordinaten
+ * geändert haben, wird der Eintrag aktualisiert. Andernfalls wird keine Aktion durchgeführt.
+ *
+ * @param resources - Ein Array von Ressourcen, die jeweils eine deskly_id, einen Namen und eine Liste von Koordinaten enthalten.
+ * @param floorRoomId - Die ID des Stockwerks oder Raums, anhand derer das Stockwerk für die Einträge bestimmt wird.
+ */
 async function checkAndInsertEntries(
     resources: Resource[],
     floorRoomId: string
@@ -97,7 +107,6 @@ async function checkAndInsertEntries(
     for (const resource of resources) {
         const { id, name, vertices } = resource;
 
-        // Laufe durch die Vertices und teile sie in x_value und y_value auf
         for (const [x, y] of vertices) {
             try {
                 const {
@@ -141,7 +150,7 @@ async function checkAndInsertEntries(
                     data.x_value !== x ||
                     data.y_value !== y
                 ) {
-                    // Update die Ressource, wenn die ID oder Koordinaten abweichen
+                    
                     const { error: updateError } = await supabase
                     .schema("bachelor_baseplant_jacob_flender")
                         .from("location")

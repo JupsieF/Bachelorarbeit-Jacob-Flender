@@ -1,5 +1,14 @@
 import { WateringData } from "@/types/wateringData";
 
+/**
+ * Ruft die Bewässerungsdaten für eine Pflanze anhand ihres wissenschaftlichen Namens ab.
+ *
+ * Sendet eine Anfrage an die interne Bewässerungs-API und gibt die Menge (in ml) sowie das Intervall (in Tagen) zurück,
+ * falls die Daten vorhanden und gültig sind. Im Fehlerfall oder bei ungültigen Daten wird `null` zurückgegeben.
+ *
+ * @param scientificName Der wissenschaftliche Name der Pflanze.
+ * @returns Ein Promise, das entweder die Bewässerungsdaten (`WateringData`) oder `null` zurückgibt.
+ */
 export async function fetchWateringData(
     scientificName: string
 ): Promise<WateringData | null> {

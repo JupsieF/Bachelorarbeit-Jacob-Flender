@@ -43,7 +43,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { PlantSize } from "@/types/size";
 
-// Typen
 type Entry = OriginalEntry & { location_id: number; floor?: number };
 
 export default function AddListForm() {

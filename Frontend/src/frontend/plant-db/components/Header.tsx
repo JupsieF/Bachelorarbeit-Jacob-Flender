@@ -1,4 +1,3 @@
-// components/Header.tsx
 "use client";
 
 import Image from "next/image";
@@ -34,7 +33,6 @@ export default function AddHeader() {
                     height={100}
                 />
             </button>
-            {/* hier wird der Callback übergeben */}
             <ThemeToggle onToggle={setIsDark} />
         </div>
     );

@@ -8,7 +8,7 @@ const basecomLocationID =
     process.env.BASECOM_LOCATIONID || process.env.BASECOM_LOCATION_ID;
 
 /**
- * Ergänzt UserDetails aus Deskly um employeeId und slackID aus der DB.
+ * Ergänzt UserDetails aus deskly um employeeId und slackID aus der DB.
  */
 export async function enrichDesklyUsersWithEmployeeData(
     users: UserDetails[]
@@ -80,7 +80,6 @@ export async function fetchBookingsForFloor(
         }
 
         const res = (await response.json()) as ApiResponse;
-        // Debugging console.log("Deskly API raw response for floor", floorID, res);
 
         if (res.status.toLowerCase() !== "success") {
             console.log(
@@ -106,7 +105,7 @@ export async function fetchBookingsForFloor(
 }
 
 /**
- * Holt alle User-Details für eine Liste von User-IDs aus deskly.
+ * Holt alle UserDetails für eine Liste von User-IDs aus deskly.
  */
 async function fetchUsersByIDs(userIDs: string[]): Promise<UserDetails[]> {
     const options: RequestInit = {

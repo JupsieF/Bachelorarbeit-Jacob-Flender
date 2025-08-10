@@ -9,11 +9,11 @@ import {UserDetails } from "@/shared/types/user";
 export function createMockBookings(realBookings: { data?: Booking[] }[]): { data?: Booking[] }[] {
     // Beispiel-User Jacob Flender
     const jacobUser: UserDetails = {
-        id: "ae8ac5f3-56a5-4552-9068-e4530131e2af",
+        id: "jacob deskly id",
         firstName: "Jacob",
         lastName: "Flender",
-        email: "jacob.flender@basecom.de",
-        slackID: "U08FWDZF3PC",
+        email: "jacob mail",
+        slackID: "jacob slack id",
         employeeId: 3,
     };
 

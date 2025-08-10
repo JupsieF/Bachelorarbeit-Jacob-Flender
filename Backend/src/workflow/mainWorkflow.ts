@@ -28,7 +28,17 @@ function logDebug(message: string, data?: any) {
     console.log(output);
 }
 
-// 1. Lade alle Bookings und UserDetails (noch nicht angereichert)
+/**
+ * Ruft alle Buchungen und zugehörigen Benutzerdetails für die angegebenen Stockwerks-IDs ab.
+ *
+ * Für jede übergebene Stockwerks-ID werden die Buchungen und Benutzerinformationen gesammelt.
+ * Die Benutzerliste wird so aggregiert, dass keine Duplikate (basierend auf der Benutzer-ID) enthalten sind.
+ *
+ * @param floorIDs - Ein Array von Stockwerks-IDs, für die die Buchungen und Benutzer abgerufen werden sollen.
+ * @returns Ein Promise, das ein Objekt mit zwei Eigenschaften enthält:
+ *   - bookings: Ein Array von Objekten, die jeweils die Buchungen für ein Stockwerk enthalten.
+ *   - users: Ein Array von Benutzerdetails, wobei jeder Benutzer nur einmal enthalten ist.
+ */
 async function getAllBookingsAndUsers(floorIDs: string[]): Promise<{
     bookings: { data?: Booking[] }[];
     users: UserDetails[];
@@ -50,7 +60,21 @@ async function getAllBookingsAndUsers(floorIDs: string[]): Promise<{
     return { bookings: aggregatedBookings, users: aggregatedUsers };
 }
 
-// 2. Filtere Distanzpaare und mappe UserDetails an die Paare
+/**
+ * Filtert und verarbeitet Distanzpaare basierend auf Bewässerungsaufgaben, Buchungen, Benutzerdetails und vorhandenen Distanzpaaren.
+ *
+ * Diese Funktion erstellt eine Zuordnung von Bewässerungsaufgaben zu relevanten Distanzpaaren, indem sie:
+ * - Buchungen nach Stockwerk gruppiert,
+ * - Distanzpaare pro Stockwerk nach bestimmten Kriterien filtert (z.B. ob ein Standort eine Pflanze ist und ob er gebucht wurde),
+ * - Benutzerdetails zu den jeweiligen Distanzpaaren hinzufügt,
+ * - und die gefilterten Distanzpaare nach Entfernung sortiert.
+ *
+ * @param wateringTasks Eine Liste von Bewässerungsaufgaben, die jeweils eine deskly_id enthalten.
+ * @param bookings Eine Liste von Buchungsantworten, gruppiert nach Stockwerk.
+ * @param users Eine Liste von Benutzerdetails, die zur Zuordnung von Buchungen verwendet werden.
+ * @param distancePairs Ein Objekt, das für jedes Stockwerk eine Liste von Distanzpaaren enthält.
+ * @returns Ein Objekt, das für jede Bewässerungsaufgabe (task.id) die relevanten, gefilterten und angereicherten Distanzpaare zurückgibt.
+ */
 async function filterDistancePairs(
     wateringTasks: WateringTask[],
     bookings: { data?: Booking[] }[],
@@ -184,7 +208,16 @@ async function filterDistancePairs(
     return distancePairsByTask;
 }
 
-// 3. Kandidatenliste pro Task bauen und in DB speichern
+/**
+ * Baut und speichert Kandidatenlisten für jede Bewässerungsaufgabe.
+ *
+ * Für jede Aufgabe werden die zugehörigen Distanzpaare durchsucht und die eindeutigen Mitarbeiter-IDs
+ * der beteiligten Nutzer gesammelt. Anschließend wird die Liste der Kandidaten-IDs für die jeweilige Aufgabe
+ * aktualisiert und gespeichert.
+ *
+ * @param wateringTasks - Array von Bewässerungsaufgaben, für die Kandidatenlisten erstellt werden sollen.
+ * @param distancePairsByTask - Ein Record, der für jede Aufgaben-ID die zugehörigen Distanzpaare enthält.
+ */
 async function buildAndStoreCandidateLists(
     wateringTasks: WateringTask[],
     distancePairsByTask: Record<number, DistancePair[]>
@@ -213,7 +246,15 @@ async function buildAndStoreCandidateLists(
     }
 }
 
-// 4. Benachrichtigung an den ersten Kandidaten (falls vorhanden)
+/**
+ * Benachrichtigt die zugewiesenen Benutzer über ihre jeweiligen Bewässerungsaufgaben.
+ *
+ * Für jede Aufgabe wird überprüft, ob ein Benutzer zugewiesen ist und ob dieser eine Slack-ID besitzt.
+ * Falls ja, wird der Benutzer über die Aufgabe benachrichtigt. Andernfalls wird ein Debug-Log-Eintrag erstellt.
+ *
+ * @param wateringTasks - Eine Liste von Bewässerungsaufgaben, die Benutzern zugewiesen sein können.
+ * @param users - Eine Liste von Benutzerdetails, die Informationen wie E-Mail, Mitarbeiter-ID und Slack-ID enthalten.
+ */
 async function notifyAssignedUsers(
     wateringTasks: WateringTask[],
     users: UserDetails[]
@@ -250,69 +291,60 @@ async function notifyAssignedUsers(
     }
 }
 
-// Main Workflow
+/**
+ * Führt den Haupt-Workflow zur Verwaltung und Zuweisung von Bewässerungsaufgaben aus.
+ *
+ * Der Workflow umfasst folgende Schritte:
+ * 1. Erstellt eine schnelle Lookup-View für Pflanzen.
+ * 2. Prüft fällige Timer in `plant_schedule` und erstellt ggf. neue Aufgaben.
+ * 3. Holt alle Bewässerungsaufgaben aus der Datenbank.
+ * 4. Holt alle Buchungen und UserDetails aus Deskly für die angegebenen Stockwerke.
+ * 5. Fügt alle User als Employees ein (mit Debug-SlackID).
+ * 6. Anreichert die UserDetails mit SlackIDs (nachdem alle Employees in der DB sind).
+ * 7. Holt die Distanzpaare für alle Stockwerke.
+ * 8. Filtert die Distanzpaare je Aufgabe und ordnet UserDetails zu.
+ * 9. Erstellt und speichert Kandidatenlisten pro Aufgabe.
+ * 10. Holt die aktuellen Aufgaben erneut (um die zugewiesenen Nutzer zu erhalten).
+ * 11. Benachrichtigt die jeweils zugewiesenen Nutzer.
+ *
+ * Fehler werden an den Aufrufer weitergegeben.
+ */
 async function mainWorkflow() {
     try {
-        logDebug("=== MAIN WORKFLOW START ===");
-
-        // 1. Erzeuge den watering_task_view, falls er nicht existiert
         await createFastLookUpView();
-        logDebug("watering_task_view created or already exists.");
 
-        // 2. Prüfe die Timer in plant_schedule und erstelle ggf. neue Tasks
         await processDuePlantSchedules();
-        logDebug(
-            "Checked due plant schedules and created new tasks if needed."
-        );
 
-        // 3. Hole alle watering_tasks aus der DB
         const wateringTasks: WateringTask[] = await fetchWateringTasksFromDB();
-        logDebug("Fetched watering tasks from DB:", wateringTasks);
 
-        // 4. Hole alle Buchungen und UserDetails aus Deskly (noch nicht angereichert)
         const floorBookings = [
             process.env.FLOOR1_ID,
             process.env.FLOOR2_ID,
             process.env.FLOOR3_ID,
         ].filter(Boolean) as string[];
-        logDebug("Floor IDs:", floorBookings);
         const { bookings: aggregatedBookings, users: aggregatedUsersRaw } =
             await getAllBookingsAndUsers(floorBookings);
 
-        // 5. Füge alle User als Employees ein (Debug-SlackID)
-        const mockSlackID = "U08FWDZF3PC"; // Meine SlackID für Debugging
+        const mockSlackID = "U08FWDZF3PC";
         await seedEmployeesFromBookings(aggregatedBookings, mockSlackID);
 
-        // 6. Jetzt UserDetails erneut anreichern (jetzt sind alle Employees in der DB)
         let aggregatedUsers = await addSlackIdsToUsers(aggregatedUsersRaw);
-        logDebug("Aggregated users after enrichment:", aggregatedUsers);
 
-        // 7. Hole die Distanzpaare für alle Stockwerke
         const distanceByFloor = await loadDistancePairs();
-        logDebug("Loaded distance pairs by floor.", distanceByFloor);
 
-        // 8. Filtere die Paare pro Stockwerk je Task und mappe UserDetails an die Paare
         const distancePairsByTask = await filterDistancePairs(
             wateringTasks,
             aggregatedBookings,
             aggregatedUsers,
             distanceByFloor
         );
-        logDebug("Distance pairs by task:", distancePairsByTask);
 
-        // 9. Baue und speichere die Kandidatenlisten pro Task
         await buildAndStoreCandidateLists(wateringTasks, distancePairsByTask);
 
-        // 10. Hole die aktuellen Tasks nochmal (um assigned_user_id zu bekommen)
         const updatedTasks: WateringTask[] = await fetchWateringTasksFromDB();
-        logDebug("Fetched updated watering tasks from DB:", updatedTasks);
 
-        // 11. Benachrichtige die jeweils zugewiesenen Nutzer
         await notifyAssignedUsers(updatedTasks, aggregatedUsers);
-
-        logDebug("=== MAIN WORKFLOW END ===");
     } catch (error) {
-        logDebug("Error in mainWorkflow:", error);
         throw error;
     }
 }

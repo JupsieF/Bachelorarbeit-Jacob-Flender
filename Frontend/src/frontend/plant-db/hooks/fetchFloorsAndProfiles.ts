@@ -6,6 +6,20 @@ import {
     getProfiles,
 } from "@/utils/localDataCache";
 
+/**
+ * React-Hook zum Laden von Stockwerken und Pflegeprofilen.
+ *
+ * Dieser Hook versucht zunächst, lokale Daten für Stockwerke und Pflegeprofile zu laden.
+ * Falls keine lokalen Daten vorhanden sind, werden die Informationen von der API `/api/location` abgerufen.
+ * Die geladenen Stockwerke und Pflegeprofile werden als State-Variablen bereitgestellt.
+ * Zusätzlich werden Lade- und Fehlerzustände verwaltet.
+ *
+ * @returns Ein Objekt mit folgenden Eigenschaften:
+ * - `floors`: Array der verfügbaren Stockwerke (als Zahlen).
+ * - `careProfiles`: Array der verfügbaren Pflegeprofile.
+ * - `loadingProfiles`: Boolean, der angibt, ob die Profile gerade geladen werden.
+ * - `error`: Fehlernachricht, falls beim Laden ein Fehler aufgetreten ist.
+ */
 export function useFloorsAndProfiles() {
     const [floors, setFloors] = useState<number[]>([]);
     const [loadingProfiles, setLoadingProfiles] = useState(false);
@@ -17,39 +31,37 @@ export function useFloorsAndProfiles() {
             try {
                 setLoadingProfiles(true);
                 setError(null);
-                
-                // 1. Versuche zuerst lokale Daten zu laden
+
                 await ensureFloorsAndProfiles();
                 const localFloors = getFloors();
                 const localProfiles = getProfiles();
 
-                // 2. Wenn lokale Daten vorhanden, verwende diese
                 if (localFloors.length > 0) {
                     setFloors(localFloors);
                     setCareProfiles(localProfiles);
                     return;
                 }
 
-                // 3. Ansonsten: Lade von der API
-                const res = await fetch('/api/location');
+                const res = await fetch("/api/location");
                 const json = await res.json();
-                
+
                 if (!res.ok) {
-                    throw new Error(json.error || 'Fehler beim Laden der Standorte');
+                    throw new Error(
+                        json.error || "Fehler beim Laden der Standorte"
+                    );
                 }
 
-                // Extrahiere unique Floors
                 const uniqueFloors = Array.from(
                     new Set(json.map((loc: any) => loc.floor))
-                ).filter((f): f is number => typeof f === "number")
-                .sort((a, b) => a - b);
+                )
+                    .filter((f): f is number => typeof f === "number")
+                    .sort((a, b) => a - b);
 
                 setFloors(uniqueFloors);
-
             } catch (err: any) {
                 setError(err.message);
-                console.error('Fehler beim Laden:', err);
-                // Fallback: Versuche nochmal lokale Daten
+                console.error("Fehler beim Laden:", err);
+
                 const localFloors = getFloors();
                 const localProfiles = getProfiles();
                 if (localFloors.length > 0) {
@@ -66,7 +78,23 @@ export function useFloorsAndProfiles() {
     return { floors, careProfiles, loadingProfiles, error };
 }
 
-// Dieser Hook für API-Zugriffe
+/**
+ * React-Hook zum Abrufen und Verwalten von Detaildaten einer ausgewählten Pflanze.
+ *
+ * Dieser Hook lädt die Bewässerungsdetails (Intervall in Tagen und Volumen in Milliliter)
+ * für eine Pflanze anhand der übergebenen ID. Die Daten werden von einer API abgerufen.
+ * Zusätzlich werden Lade- und Fehlerzustände verwaltet.
+ *
+ * @param chosenId Die ID der ausgewählten Pflanze oder `null`, falls keine Pflanze ausgewählt ist.
+ * @returns Ein Objekt mit folgenden Eigenschaften:
+ * - `loading`: Gibt an, ob die Daten gerade geladen werden.
+ * - `error`: Enthält eine Fehlermeldung, falls ein Fehler aufgetreten ist, sonst `null`.
+ * - `interval`: Das Bewässerungsintervall in Tagen.
+ * - `volume`: Das Bewässerungsvolumen in Milliliter.
+ * - `setInterval`: Setter-Funktion für das Intervall.
+ * - `setVolume`: Setter-Funktion für das Volumen.
+ * - `setError`: Setter-Funktion für den Fehlerzustand.
+ */
 export function usePlantDetails(chosenId: number | null) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);

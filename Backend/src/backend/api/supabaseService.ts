@@ -1,13 +1,7 @@
-/* 
-Diese Datei enthält Funktionen, die mit der Supabase-Datenbank interagieren.
-Sie ist für alle API-Endpunkte zuständig, die Daten aus der Supabase-Datenbank abrufen oder aktualisieren.
-*/
-
 import supabase from "./backendConnection";
 import { supabaseAdmin } from "./supabaseAdminConnection";
 import { WateringTask } from "../../shared/types/task";
 import { UserDetails } from "../../shared/types/user";
-import { DistancePair } from "../../shared/types/locationData";
 import { app } from "./slackConnection";
 
 async function cli() {
@@ -27,7 +21,15 @@ if (
 }
 
 /**
- * Hole UserDetails aus der DB anhand der Employee-ID.
+ * Holt die Benutzerdetails für eine gegebene Employee-ID aus der Supabase-Datenbank.
+ *
+ * Fragt die "employee"-Tabelle im "bachelor_baseplant_jacob_flender"-Schema ab
+ * und selektiert die Felder: id, mail, slack_id und real_name. Falls ein passender
+ * Mitarbeiter gefunden wird, wird ein `UserDetails`-Objekt mit den relevanten Informationen zurückgegeben.
+ * Gibt `null` zurück, wenn kein Mitarbeiter gefunden wird oder ein Fehler bei der Abfrage auftritt.
+ *
+ * @param employeeId - Die eindeutige ID des Mitarbeiters, dessen Details abgerufen werden sollen.
+ * @returns Ein Promise, das entweder ein `UserDetails`-Objekt oder `null` zurückgibt.
  */
 export async function getUserDetailsByEmployeeId(
     employeeId: number
@@ -51,6 +53,17 @@ export async function getUserDetailsByEmployeeId(
     };
 }
 
+/**
+ * Ruft die Employee-Daten aus Supabase ab.
+ *
+ * Verwendet das Schema "bachelor_baseplant_jacob_flender" und die Tabelle "employee",
+ * um die Felder "id", "mail" und "slack_id" auszulesen.
+ *
+ * Gibt die abgerufenen Employee-Daten zurück.
+ * Im Fehlerfall wird eine Fehlermeldung in der Konsole ausgegeben und die Daten zurückgegeben.
+ *
+ * @returns Promise mit den Employee-Daten oder undefined bei Fehler.
+ */
 export async function fetchEmployeesFromSupabase() {
     const { data: employees, error } = await supabase
         .schema("bachelor_baseplant_jacob_flender")
@@ -62,9 +75,12 @@ export async function fetchEmployeesFromSupabase() {
         return employees;
     }
 }
-// 1.
+
 /**
- * Erstellt den watering_task_view, falls er noch nicht existiert.
+ * Erstellt eine schnelle Lookup-View in der Supabase-Datenbank durch Aufruf der gespeicherten Prozedur `createfastlookupview`.
+ * 
+ * @returns {Promise<void>} Ein Promise, das abgeschlossen wird, wenn die View erfolgreich erstellt wurde.
+ * @throws Gibt einen Fehler in der Konsole aus, falls die Erstellung der View fehlschlägt.
  */
 export async function createFastLookUpView(): Promise<void> {
     try {
@@ -72,20 +88,28 @@ export async function createFastLookUpView(): Promise<void> {
             .schema("bachelor_baseplant_jacob_flender")
             .rpc("createfastlookupview");
         if (error) throw error;
-        // Debugging: console.log("watering_task_view wurde angelegt.");
     } catch (error) {
         console.error("Fehler beim Erstellen der View:", error);
     }
 }
 
-// 2.
 /**
- * Prüft, welche Pflanzen bewässerungsfällig sind, und fügt sie in die watering_task-Tabelle ein.
+ * Verarbeitet alle Pflanzengießpläne, deren nächstes Gießdatum überschritten ist.
+ *
+ * Ablauf:
+ * 1. Holt alle Pflanzengießpläne aus der Datenbank, deren `next_watering` vor dem aktuellen Zeitpunkt liegt.
+ * 2. Prüft, für welche dieser Pflanzen bereits offene Gießaufgaben existieren.
+ * 3. Erstellt neue Gießaufgaben für Pflanzen, die noch keine offene Aufgabe haben.
+ * 4. Fügt die neuen Aufgaben in die Datenbank ein.
+ *
+ * Fehlerbehandlung:
+ * - Gibt Fehlermeldungen aus, falls beim Abrufen oder Einfügen der Datenbankeinträge Fehler auftreten.
+ *
+ * Gibt eine Konsolenausgabe aus, wenn keine Pflanzen zum Gießen fällig sind.
  */
 export async function processDuePlantSchedules() {
     const now = new Date().toISOString();
 
-    // Schritt 1: Hole nur die relevanten Felder aus plant_schedule
     const { data: duePlants, error } = await supabase
         .schema("bachelor_baseplant_jacob_flender")
         .from("plant_schedule")
@@ -108,16 +132,13 @@ export async function processDuePlantSchedules() {
         return;
     }
 
-    // Debugging: console.log("Due plants:", duePlants);
-
-    // Schritt 2: Prüfe, welche Pflanzen bereits Tasks haben
     const plantIDs = duePlants.map((plant) => plant.plant_id);
     const { data: existingTasks, error: taskError } = await supabase
         .schema("bachelor_baseplant_jacob_flender")
         .from("watering_task")
         .select("plant_id")
         .in("plant_id", plantIDs)
-        .neq("status", "completed"); // Ignoriere abgeschlossene Tasks
+        .neq("status", "completed");
 
     if (taskError) {
         console.error("Error fetching existing watering tasks:", taskError);
@@ -128,7 +149,6 @@ export async function processDuePlantSchedules() {
         (existingTasks ?? []).map((task) => task.plant_id)
     );
 
-    // Schritt 3: Erstelle neue Tasks nur mit den erforderlichen Feldern
     const newTasks = duePlants
         .filter((plant) => !existingPlantIDs.has(plant.plant_id))
         .map((plant) => ({
@@ -142,11 +162,9 @@ export async function processDuePlantSchedules() {
         }));
 
     if (newTasks.length === 0) {
-        // Debugging console.log("No new watering tasks to insert.");
         return;
     }
 
-    // Schritt 4: Füge neue Tasks ein
     const { error: insertError } = await supabase
         .schema("bachelor_baseplant_jacob_flender")
         .from("watering_task")
@@ -155,16 +173,17 @@ export async function processDuePlantSchedules() {
     if (insertError) {
         console.error("Error inserting new watering tasks:", insertError);
     } else {
-        // Debugging:
-        /* console.log(
-            `Successfully inserted ${newTasks.length} new watering tasks.`
-        ); */
     }
 }
 
-// 3.
 /**
- * Holt alle watering_tasks aus der DB.
+ * Ruft alle Bewässerungsaufgaben aus der Datenbank-View `watering_task_view` ab.
+ * 
+ * Verwendet das Supabase-SDK, um die Aufgaben aus dem Schema `bachelor_baseplant_jacob_flender` zu laden.
+ * Gibt ein Array von `WateringTask`-Objekten zurück. 
+ * Im Fehlerfall wird ein leeres Array zurückgegeben und der Fehler wird in der Konsole protokolliert.
+ * 
+ * @returns Ein Promise, das ein Array von Bewässerungsaufgaben (`WateringTask[]`) enthält.
  */
 export async function fetchWateringTasksFromDB(): Promise<WateringTask[]> {
     try {
@@ -206,17 +225,21 @@ export async function fetchWateringTasksFromDB(): Promise<WateringTask[]> {
 }
 
 /**
- * Schreibt Nutzerzuweisungen für mehrere Tasks im Bulk in die Datenbank.
- * @param assignments Array mit { task, user }
+ * Weist mehreren Benutzern Aufgaben in einem Schritt zu.
  *
- * Hinweis: Das Matching erfolgt ausschließlich über die E-Mail-Adresse.
+ * Diese Funktion nimmt eine Liste von Zuweisungen entgegen, wobei jede Zuweisung eine Aufgabe und einen Benutzer (identifiziert durch E-Mail) enthält.
+ * Sie sucht die entsprechenden Mitarbeiter-IDs anhand der E-Mail-Adressen und aktualisiert die Aufgaben in der Datenbank,
+ * sodass der jeweilige Benutzer als zuständiger Mitarbeiter eingetragen wird.
+ *
+ * @param assignments Array von Objekten, die jeweils eine Aufgabe (`task`) und einen Benutzer mit E-Mail (`user.email`) enthalten.
+ * 
+ * @throws Fehler beim Abrufen der Mitarbeiterdaten oder beim Aktualisieren der Aufgaben in der Datenbank.
  */
 export async function bulkAssignUsersToTasks(
     assignments: Array<{ task: WateringTask; user: { email: string } }>
 ) {
     if (!assignments.length) return;
 
-    // 1. Sammle alle E-Mails
     const emails = Array.from(
         new Set(
             assignments
@@ -227,7 +250,6 @@ export async function bulkAssignUsersToTasks(
 
     if (!emails.length) return;
 
-    // 2. Hole alle relevanten Employees mit id anhand der E-Mail
     const { data: employees, error } = await supabase
         .schema("bachelor_baseplant_jacob_flender")
         .from("employee")
@@ -239,7 +261,6 @@ export async function bulkAssignUsersToTasks(
         throw error;
     }
 
-    // Mappe E-Mail auf employee.id
     const emailToId = new Map<string, number>();
     (employees ?? []).forEach((emp) => {
         if (emp.mail && emp.id) {
@@ -247,7 +268,6 @@ export async function bulkAssignUsersToTasks(
         }
     });
 
-    // 3. Erzeuge Update-Objekte für die DB
     const updates = assignments
         .filter((a) => a.user && a.user.email && emailToId.has(a.user.email))
         .map((a) => ({
@@ -277,16 +297,26 @@ export async function bulkAssignUsersToTasks(
 }
 
 /**
- * Synchronisiert alle Slack-User mit der Employee-Tabelle in der Datenbank.
- * Speichert real_name und Slack-ID. Fügt nur neue Nutzer hinzu, die noch nicht existieren.
+ * Synchronisiert Slack-Nutzer mit der Datenbank.
+ *
+ * Diese Funktion führt folgende Schritte aus:
+ * 1. Holt alle Nutzer aus Slack.
+ * 2. Filtert echte Nutzer (keine Bots, keine gelöschten Accounts).
+ * 3. Holt alle bereits gespeicherten Slack-IDs und Namen aus der Datenbank.
+ * 4. Findet neue Nutzer, die noch nicht in der Datenbank sind.
+ * 5. Fügt neue Nutzer in die Datenbank ein.
+ *
+ * Fehler werden in der Konsole ausgegeben.
+ *
+ * @returns {Promise<void>} Ein Promise, das abgeschlossen wird, wenn die Synchronisation beendet ist.
  */
 export async function syncSlackUsersToDB(): Promise<void> {
     try {
-        // 1. Hole alle Slack-User
+    
         const result = await app.client.users.list({});
         const members = result.members ?? [];
 
-        // 2. Filtere echte Nutzer (keine Bots, keine gelöschten)
+    
         const validUsers = members.filter(
             (user: any) =>
                 !user.deleted &&
@@ -296,7 +326,6 @@ export async function syncSlackUsersToDB(): Promise<void> {
                 typeof user.real_name === "string"
         );
 
-        // 3. Hole alle bereits gespeicherten Slack-IDs und real_names aus der DB
         const { data: existing, error } = await supabase
             .schema("bachelor_baseplant_jacob_flender")
             .from("employee")
@@ -311,14 +340,12 @@ export async function syncSlackUsersToDB(): Promise<void> {
             (existing ?? []).map((u: any) => `${u.slack_id}|${u.real_name}`)
         );
 
-        // 4. Finde neue Nutzer, die noch nicht in der DB sind
         const newUsers = validUsers
             .filter((user: any) => {
                 const key = `${user.id}|${user.real_name}`;
                 return !existingSet.has(key);
             })
             .map((user: any) => {
-                // E-Mail bestimmen: zuerst echtes E-Mail-Feld, sonst aus name bauen
                 let mail: string | null = null;
                 if (user.profile?.email) {
                     mail = user.profile.email;
@@ -337,7 +364,6 @@ export async function syncSlackUsersToDB(): Promise<void> {
             return;
         }
 
-        // 5. Schreibe neue Nutzer in die DB
         const { error: insertError } = await supabase
             .schema("bachelor_baseplant_jacob_flender")
             .from("employee")
@@ -353,41 +379,15 @@ export async function syncSlackUsersToDB(): Promise<void> {
     }
 }
 
-// Mock function
-function notifyUserInTestChannel(desklyUserId: string, arg1: string) {
-    console.log(
-        `Mock notification for user ${desklyUserId} in test channel: ${arg1}`
-    );
-    return Promise.resolve(); // Simulate successful notification
-}
-
 /**
- * Holt ein Mapping von E-Mail (lowercase) zu SlackID aus der employee-Tabelle.
- * Gibt eine Map zurück: email (lowercase) => slackID
- */
-export async function getEmailToSlackIdMap(): Promise<Map<string, string>> {
-    const { data: employees, error } = await supabase
-        .schema("bachelor_baseplant_jacob_flender")
-        .from("employee")
-        .select("mail, slack_id");
-
-    if (error) {
-        console.error("Fehler beim Abrufen der Employee-Daten:", error);
-        return new Map();
-    }
-
-    const emailToSlackId = new Map<string, string>();
-    (employees ?? []).forEach((emp) => {
-        if (emp.mail && emp.slack_id) {
-            emailToSlackId.set(emp.mail.toLowerCase(), emp.slack_id);
-        }
-    });
-    return emailToSlackId;
-}
-
-/**
- * Ergänzt eine Liste von UserDetails um die SlackID anhand der E-Mail-Adresse.
- * Gibt ein neues Array mit vollständigen UserDetails zurück.
+ * Ergänzt eine Liste von UserDetails um Slack-ID und Employee-ID anhand der E-Mail-Adresse.
+ *
+ * Holt alle Employees mit E-Mail, Slack-ID und Employee-ID aus der "employee"-Tabelle.
+ * Für jeden Nutzer im Eingabe-Array werden die passende Slack-ID und Employee-ID hinzugefügt,
+ * sofern eine Übereinstimmung der E-Mail gefunden wird.
+ *
+ * @param users - Array von UserDetails, die um Slack-ID und Employee-ID ergänzt werden sollen.
+ * @returns Ein Promise, das ein Array von UserDetails mit ergänzter Slack-ID und Employee-ID zurückgibt.
  */
 export async function addSlackIdsToUsers(
     users: UserDetails[]
@@ -440,8 +440,6 @@ export async function updateCandidateUserIdsForTask(
         })
         .eq("id", taskId);
 }
-
-// Für den Slack-Bot:
 
 /**
  * Prüft den Status einer Bewässerungsaufgabe
@@ -581,7 +579,6 @@ export async function getEmployeeDetails(employeeId: number) {
         .single();
 }
 
-// Für das Ressourcen-Management
 
 /**
  * Holt alle Locations aus der Datenbank
