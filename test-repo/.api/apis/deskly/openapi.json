@@ -1,0 +1,37 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "desk.ly",
+    "version": "unknown"
+  },
+  "servers": [
+    {
+      "url": "https://app.desk.ly/"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "sec0": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "x-bearer-format": ""
+      }
+    }
+  },
+  "security": [
+    {
+      "sec0": []
+    }
+  ],
+  "paths": {},
+  "x-readme": {
+    "headers": [
+      {
+        "key": "X-AUTH-MODE",
+        "value": "API-Key"
+      }
+    ]
+  },
+  "x-readme-fauxas": true
+}

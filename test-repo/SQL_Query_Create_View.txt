@@ -1,0 +1,58 @@
+-- 1) Alte View (falls vorhanden) entfernen
+DROP VIEW IF EXISTS bachelor_baseplant_jacob_flender.watering_task_view;
+
+-- 2) SECURITY DEFINER-Funktion anlegen oder ersetzen
+CREATE OR REPLACE FUNCTION bachelor_baseplant_jacob_flender.createfastlookupview()
+RETURNS void
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  CREATE OR REPLACE VIEW bachelor_baseplant_jacob_flender.watering_task_view AS
+  SELECT
+    wt.id,
+    wt.plant_id,
+    p.name AS plant_name,
+    p.image_url,
+    wt.assigned_user_id,
+    wt.status,
+    wt.notified_at,
+    wt.reminder_at,
+    ps.next_watering,
+    pc.interval,
+    pc.volume,
+    pc.method,
+    l.id AS location_id,
+    l.deskly_id,
+    l.name AS location_name,
+    l.floor
+  FROM bachelor_baseplant_jacob_flender.watering_task wt
+  JOIN bachelor_baseplant_jacob_flender.plant p ON p.id = wt.plant_id
+  JOIN bachelor_baseplant_jacob_flender.plant_schedule ps ON ps.plant_id = p.id
+  JOIN bachelor_baseplant_jacob_flender.plant_care pc ON pc.id = p.care_id
+  JOIN bachelor_baseplant_jacob_flender.location l ON l.id = p.location_id;
+$$;
+
+-- 3) Funktionseigentümer auf postgres setzen
+ALTER FUNCTION bachelor_baseplant_jacob_flender.createfastlookupview() OWNER TO postgres;
+
+-- 4) EXECUTE-Recht erteilen
+GRANT EXECUTE ON FUNCTION bachelor_baseplant_jacob_flender.createfastlookupview()
+  TO anon, authenticated, service_role;
+
+SELECT bachelor_baseplant_jacob_flender.createfastlookupview();
+
+-- 5) (optional) Schema-USAGE & Grants für Tabellen & View
+GRANT USAGE ON SCHEMA bachelor_baseplant_jacob_flender
+  TO anon, authenticated, service_role;
+
+GRANT SELECT
+  ON bachelor_baseplant_jacob_flender.watering_task,
+     bachelor_baseplant_jacob_flender.plant,
+     bachelor_baseplant_jacob_flender.plant_schedule,
+     bachelor_baseplant_jacob_flender.plant_care,
+     bachelor_baseplant_jacob_flender.location
+  TO anon, authenticated, service_role;
+
+GRANT SELECT, INSERT, UPDATE, DELETE
+  ON bachelor_baseplant_jacob_flender.watering_task_view
+  TO anon, authenticated, service_role;

@@ -1,0 +1,47 @@
+{
+    "name": "test-repo",
+    "version": "1.0.0",
+    "description": "testing",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "seed-employees": "tsx -r dotenv/config src/Setup/seedEmployeeTable.ts",
+        "import-deskly-locations": "tsx -r dotenv/config src/Setup/seedLocations.ts",
+        "calc-distances": "tsx -r dotenv/config src/Setup/locationDistances.ts --calc",
+        "load-distances": "tsx -r dotenv/config src/Setup/locationDistances.ts --load",
+        "load-distance-log": "tsx -r dotenv/config src/Setup/locationDistances.ts --load > load_distance_pair.log 2>&1",
+        "query-watering-tasks": "tsx -r dotenv/config src/backend/api/scheduleWateringTasks.js",
+        "start-workflow": "tsx -r dotenv/config src/index.ts",
+        "start-workflow-log": "tsx -r dotenv/config src/index.ts > output1.log 2>&1",
+        "start-slackbot": "tsx -r dotenv/config src/slack/slackBot.ts",
+        "debug-view-log": "tsx -r dotenv/config src/backend/api/supabaseService.ts --view > create_view.log 2>&1",
+        "reset-assignments": "tsx -r dotenv/config src/Setup/resetAssignments.ts",
+        "reset-waterings": "tsx -r dotenv/config src/TestStuff/resetWaterings.ts",
+        
+        "generate-db-types": "npx supabase gen types typescript --project-id trgtctrupcedpfomrrgj --schema bachelor_baseplant_jacob_flender > supabase/database.types.ts",
+        "log-json": "tsx -r dotenv/config src/TestStuff/testing.js > beispielhafte_buchungen_anonymisiert.log 2>&1",
+        "log-pairs": "tsx -r dotenv/config src/Setup/locationDistances.ts --analyze > pairs.log 2>&1",
+
+        "test-nearest-neighbor": "tsx -r dotenv/config src/TestStuff/NN/nearestNeighborTest.ts > nearest_neighbor_test.log 2>&1",
+        "test-timeout": "tsx -r dotenv/config src/TestStuff/Ausweichen/timeoutTest.ts > timeout_test.log 2>&1"
+    },
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@slack/bolt": "^4.2.1",
+        "@slack/web-api": "^7.8.0",
+        "@supabase/supabase-js": "^2.49.4",
+        "dotenv": "^16.4.7",
+        "dotenv-cli": "^8.0.0",
+        "node-fetch": "^3.3.2",
+        "supabase": "^2.30.4",
+        "tsx": "^4.19.3"
+    },
+    "devDependencies": {
+        "@types/next": "^8.0.7",
+        "@types/node": "^22.15.18",
+        "next": "^15.3.3",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.8.3"
+    }
+}

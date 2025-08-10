@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "apis": [
+    {
+      "identifier": "deskly",
+      "source": "@deskly/v@deskly/v2#c4l16m3wt1bab",
+      "integrity": "sha512-n+itEqHDHuu4JTVxx6L8+9hE5ZK5dorkwt11SDJW5jm24E7ARghXsWVmwwJPspxBKvKrrqvhgBARMA7z66UEjQ==",
+      "installerVersion": "6.1.3"
+    }
+  ]
+}
